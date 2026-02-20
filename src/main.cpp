@@ -1,5 +1,30 @@
 #include <SFML/Graphics.hpp>
-#include <cmath>
+#include <iostream>
+
+enum class Direction
+{
+	Up,
+	Down,
+	Left,
+	Right
+};
+
+sf::Vector2f GetVelocity(Direction direction, float cellSize)
+{
+	switch (direction)
+	{
+	case Direction::Up:
+		return {0.f, -cellSize};
+	case Direction::Down:
+		return {0.f, cellSize};
+	case Direction::Left:
+		return {-cellSize, 0.f};
+	case Direction::Right:
+		return {cellSize, 0.f};
+	default:
+		return {0.f, 0.f};
+	}
+}
 
 int main()
 {
@@ -14,48 +39,59 @@ int main()
 	player.setOutlineThickness(1.f);
 	player.setPosition({100.f, 100.f});
 
-	player.setOrigin({25.f, 25.f});
-
-	const float playerSpeed = 100.f;
+	player.setOrigin({10.f, 10.f});
 
 	sf::Clock clock;
 
+	sf::Vector2f velocity{0.f, 0.f};
+
+	auto direction = Direction::Right;
+	sf::Time moveInterval = sf::seconds(0.15f);
+	sf::Time accumulator;
+
 	while (window.isOpen())
 	{
+		sf::Time elapsed = clock.restart();
+
 		while (const std::optional event = window.pollEvent())
 		{
 			if (event->is<sf::Event::Closed>())
 			{
 				window.close();
 			}
+
+			if (const auto *keyPressed = event->getIf<sf::Event::KeyPressed>())
+			{
+				if (keyPressed->code == sf::Keyboard::Key::D && (direction == Direction::Up || direction == Direction::Down))
+				{
+					direction = Direction::Right;
+				}
+
+				if (keyPressed->code == sf::Keyboard::Key::A && (direction == Direction::Up || direction == Direction::Down))
+				{
+					direction = Direction::Left;
+				}
+
+				if (keyPressed->code == sf::Keyboard::Key::W && (direction == Direction::Left || direction == Direction::Right))
+				{
+					direction = Direction::Up;
+				}
+
+				if (keyPressed->code == sf::Keyboard::Key::S && (direction == Direction::Left || direction == Direction::Right))
+				{
+					direction = Direction::Down;
+				}
+			}
 		}
 
-		sf::Time elapsed = clock.restart();
-		float deltaTime = elapsed.asSeconds();
-
-		sf::Vector2f velocity{0.f, 0.f};
-
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W))
+		accumulator += elapsed;
+		while (accumulator >= moveInterval)
 		{
-			velocity.y -= 1.f;
-		}
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S))
-		{
-			velocity.y += 1.f;
-		}
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A))
-		{
-			velocity.x -= 1.f;
-		}
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D))
-		{
-			velocity.x += 1.f;
+			accumulator -= moveInterval;
+			player.move(GetVelocity(direction, 20.f));
 		}
 
-		if (velocity.x != 0.f && velocity.y != 0.f)
-			velocity /= std::sqrt(2.f);
-
-		player.move(velocity * deltaTime * playerSpeed);
+		std::cout << "Player Velocity: " << GetVelocity(direction, 20.f).x << ", " << GetVelocity(direction, 20.f).y << std::endl;
 
 		window.clear(sf::Color::White);
 		window.draw(player);
