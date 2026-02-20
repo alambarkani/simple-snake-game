@@ -1,31 +1,102 @@
 #include <SFML/Graphics.hpp>
+#include <iostream>
+
+enum class Direction
+{
+	Up,
+	Down,
+	Left,
+	Right
+};
+
+sf::Vector2f GetVelocity(Direction direction, float cellSize)
+{
+	switch (direction)
+	{
+	case Direction::Up:
+		return {0.f, -cellSize};
+	case Direction::Down:
+		return {0.f, cellSize};
+	case Direction::Left:
+		return {-cellSize, 0.f};
+	case Direction::Right:
+		return {cellSize, 0.f};
+	default:
+		return {0.f, 0.f};
+	}
+}
 
 int main()
 {
-	sf::RenderWindow window(sf::VideoMode({200, 200}), "SFML works!");
-	sf::CircleShape shape(100.f);
-	shape.setFillColor(sf::Color::Green);
-	sf::RectangleShape rectangle({100.f, 100.f});
-	rectangle.setFillColor(sf::Color::Red);
-	rectangle.setOrigin({50.f, 50.f});
+	sf::RenderWindow window(sf::VideoMode({1280, 600}), "Snake Game");
+	window.setVerticalSyncEnabled(true);
+	window.setFramerateLimit(60);
 
-	float rotationSpeed = 100.f;
+	// Player Sprite
+	sf::RectangleShape player({20.f, 20.f});
+	player.setFillColor(sf::Color::Green);
+	player.setOutlineColor(sf::Color::Black);
+	player.setOutlineThickness(1.f);
+	player.setPosition({100.f, 100.f});
+
+	player.setOrigin({10.f, 10.f});
+
 	sf::Clock clock;
+
+	sf::Vector2f velocity{0.f, 0.f};
+
+	auto direction = Direction::Right;
+	sf::Time moveInterval = sf::seconds(0.15f);
+	sf::Time accumulator;
+
 	while (window.isOpen())
 	{
-		sf::Time deltaTime = clock.restart();
-		float dt = deltaTime.asSeconds();
+		sf::Time elapsed = clock.restart();
+
 		while (const std::optional event = window.pollEvent())
 		{
 			if (event->is<sf::Event::Closed>())
+			{
 				window.close();
+			}
+
+			if (const auto *keyPressed = event->getIf<sf::Event::KeyPressed>())
+			{
+				if (keyPressed->code == sf::Keyboard::Key::D && (direction == Direction::Up || direction == Direction::Down))
+				{
+					direction = Direction::Right;
+				}
+
+				if (keyPressed->code == sf::Keyboard::Key::A && (direction == Direction::Up || direction == Direction::Down))
+				{
+					direction = Direction::Left;
+				}
+
+				if (keyPressed->code == sf::Keyboard::Key::W && (direction == Direction::Left || direction == Direction::Right))
+				{
+					direction = Direction::Up;
+				}
+
+				if (keyPressed->code == sf::Keyboard::Key::S && (direction == Direction::Left || direction == Direction::Right))
+				{
+					direction = Direction::Down;
+				}
+			}
 		}
 
-		rectangle.rotate(sf::degrees(rotationSpeed * dt));
+		accumulator += elapsed;
+		while (accumulator >= moveInterval)
+		{
+			accumulator -= moveInterval;
+			player.move(GetVelocity(direction, 20.f));
+		}
 
-		window.clear();
-		window.draw(shape);
-		window.draw(rectangle);
+		std::cout << "Player Velocity: " << GetVelocity(direction, 20.f).x << ", " << GetVelocity(direction, 20.f).y << std::endl;
+
+		window.clear(sf::Color::White);
+		window.draw(player);
 		window.display();
 	}
+
+	return 0;
 }
