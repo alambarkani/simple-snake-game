@@ -41,6 +41,8 @@ int main()
 
 	player.setOrigin({10.f, 10.f});
 
+	sf::Vector2u windowSize = window.getSize();
+
 	sf::Clock clock;
 
 	sf::Vector2f velocity{0.f, 0.f};
@@ -53,6 +55,7 @@ int main()
 	{
 		sf::Time elapsed = clock.restart();
 
+		sf::FloatRect playerBounds = player.getGlobalBounds();
 		while (const std::optional event = window.pollEvent())
 		{
 			if (event->is<sf::Event::Closed>())
@@ -89,6 +92,23 @@ int main()
 		{
 			accumulator -= moveInterval;
 			player.move(GetVelocity(direction, 20.f));
+		}
+
+		if (playerBounds.position.x <= 0.f)
+		{
+			player.setPosition({windowSize.x - 20.f, player.getPosition().y});
+		}
+		if (playerBounds.position.y <= 0.f)
+		{
+			player.setPosition({player.getPosition().x, windowSize.y - 20.f});
+		}
+		if (playerBounds.position.y + playerBounds.size.y >= windowSize.y)
+		{
+			player.setPosition({player.getPosition().x, 20.f});
+		}
+		if (playerBounds.position.x + playerBounds.size.x >= windowSize.x)
+		{
+			player.setPosition({20.f, player.getPosition().y});
 		}
 
 		std::cout << "Player Velocity: " << GetVelocity(direction, 20.f).x << ", " << GetVelocity(direction, 20.f).y << std::endl;
