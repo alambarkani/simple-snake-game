@@ -26,11 +26,25 @@ sf::Vector2f GetVelocity(Direction direction, float cellSize)
 	}
 }
 
+struct food
+{
+	sf::CircleShape shape;
+	bool isActive{false};
+
+	food() : shape(10.f)
+	{
+		shape.setFillColor(sf::Color::Red);
+		shape.setOrigin({10.f, 10.f});
+	}
+};
+
 int main()
 {
 	sf::RenderWindow window(sf::VideoMode({1280, 600}), "Snake Game");
 	window.setVerticalSyncEnabled(true);
 	window.setFramerateLimit(60);
+
+	std::vector<food> foods(5);
 
 	// Player Sprite
 	sf::RectangleShape player({20.f, 20.f});
@@ -49,7 +63,9 @@ int main()
 
 	auto direction = Direction::Right;
 	sf::Time moveInterval = sf::seconds(0.15f);
-	sf::Time accumulator;
+	sf::Time foodSpawnInterval = sf::seconds(1.f);
+	sf::Time moveAccumulator;
+	sf::Time foodSpawnAccumulator;
 
 	while (window.isOpen())
 	{
@@ -87,10 +103,25 @@ int main()
 			}
 		}
 
-		accumulator += elapsed;
-		while (accumulator >= moveInterval)
+		foodSpawnAccumulator += elapsed;
+		if (foodSpawnAccumulator >= foodSpawnInterval)
 		{
-			accumulator -= moveInterval;
+			foodSpawnAccumulator -= foodSpawnInterval;
+			for (auto &f : foods)
+			{
+				if (!f.isActive)
+				{
+					f.shape.setPosition({static_cast<float>(std::rand() % windowSize.x), static_cast<float>(std::rand() % windowSize.y)});
+					f.isActive = true;
+					break;
+				}
+			}
+		}
+
+		moveAccumulator += elapsed;
+		while (moveAccumulator >= moveInterval)
+		{
+			moveAccumulator -= moveInterval;
 			player.move(GetVelocity(direction, 20.f));
 		}
 
@@ -115,6 +146,13 @@ int main()
 
 		window.clear(sf::Color::White);
 		window.draw(player);
+		for (const auto &f : foods)
+		{
+			if (f.isActive)
+			{
+				window.draw(f.shape);
+			}
+		}
 		window.display();
 	}
 
