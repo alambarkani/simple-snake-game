@@ -111,7 +111,9 @@ int main()
 			{
 				if (!f.isActive)
 				{
-					f.shape.setPosition({static_cast<float>(std::rand() % windowSize.x), static_cast<float>(std::rand() % windowSize.y)});
+					float x = static_cast<float>((std::rand() % (windowSize.x / 20)) * 20);
+					float y = static_cast<float>((std::rand() % (windowSize.y / 20)) * 20);
+					f.shape.setPosition({x, y});
 					f.isActive = true;
 					break;
 				}
