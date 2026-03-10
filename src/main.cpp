@@ -47,13 +47,15 @@ int main()
 	std::vector<food> foods(5);
 
 	// Player Sprite
-	sf::RectangleShape player({20.f, 20.f});
-	player.setFillColor(sf::Color::Green);
-	player.setOutlineColor(sf::Color::Black);
-	player.setOutlineThickness(1.f);
-	player.setPosition({100.f, 100.f});
+	std::vector<sf::RectangleShape> snake;
+	sf::RectangleShape head({20.f, 20.f});
+	head.setFillColor(sf::Color::Green);
+	head.setOutlineColor(sf::Color::Black);
+	head.setOutlineThickness(1.f);
+	head.setPosition({100.f, 100.f});
 
-	player.setOrigin({10.f, 10.f});
+	head.setOrigin({10.f, 10.f});
+	snake.push_back(head);
 
 	sf::Vector2u windowSize = window.getSize();
 
@@ -62,6 +64,7 @@ int main()
 	sf::Vector2f velocity{0.f, 0.f};
 
 	auto direction = Direction::Right;
+	auto currentMoveDirection = Direction::Right;
 	sf::Time moveInterval = sf::seconds(0.15f);
 	sf::Time foodSpawnInterval = sf::seconds(1.f);
 	sf::Time moveAccumulator;
@@ -71,7 +74,6 @@ int main()
 	{
 		sf::Time elapsed = clock.restart();
 
-		sf::FloatRect playerBounds = player.getGlobalBounds();
 		while (const std::optional event = window.pollEvent())
 		{
 			if (event->is<sf::Event::Closed>())
@@ -81,22 +83,22 @@ int main()
 
 			if (const auto *keyPressed = event->getIf<sf::Event::KeyPressed>())
 			{
-				if (keyPressed->code == sf::Keyboard::Key::D && (direction == Direction::Up || direction == Direction::Down))
+				if (keyPressed->code == sf::Keyboard::Key::D && (currentMoveDirection == Direction::Up || currentMoveDirection == Direction::Down))
 				{
 					direction = Direction::Right;
 				}
 
-				if (keyPressed->code == sf::Keyboard::Key::A && (direction == Direction::Up || direction == Direction::Down))
+				if (keyPressed->code == sf::Keyboard::Key::A && (currentMoveDirection == Direction::Up || currentMoveDirection == Direction::Down))
 				{
 					direction = Direction::Left;
 				}
 
-				if (keyPressed->code == sf::Keyboard::Key::W && (direction == Direction::Left || direction == Direction::Right))
+				if (keyPressed->code == sf::Keyboard::Key::W && (currentMoveDirection == Direction::Left || currentMoveDirection == Direction::Right))
 				{
 					direction = Direction::Up;
 				}
 
-				if (keyPressed->code == sf::Keyboard::Key::S && (direction == Direction::Left || direction == Direction::Right))
+				if (keyPressed->code == sf::Keyboard::Key::S && (currentMoveDirection == Direction::Left || currentMoveDirection == Direction::Right))
 				{
 					direction = Direction::Down;
 				}
@@ -124,30 +126,72 @@ int main()
 		while (moveAccumulator >= moveInterval)
 		{
 			moveAccumulator -= moveInterval;
-			player.move(GetVelocity(direction, 20.f));
+			
+			sf::Vector2f oldTailPos = snake.back().getPosition();
+
+			for (size_t i = snake.size() - 1; i > 0; --i)
+			{
+				snake[i].setPosition(snake[i - 1].getPosition());
+			}
+			snake[0].move(GetVelocity(direction, 20.f));
+			currentMoveDirection = direction;
+
+			sf::FloatRect bounds = snake[0].getGlobalBounds();
+			if (bounds.position.x < 0.f)
+			{
+				snake[0].setPosition({static_cast<float>(windowSize.x) - 10.f, snake[0].getPosition().y});
+			}
+			else if (bounds.position.x + bounds.size.x > windowSize.x)
+			{
+				snake[0].setPosition({10.f, snake[0].getPosition().y});
+			}
+
+			bounds = snake[0].getGlobalBounds();
+			if (bounds.position.y < 0.f)
+			{
+				snake[0].setPosition({snake[0].getPosition().x, static_cast<float>(windowSize.y) - 10.f});
+			}
+			else if (bounds.position.y + bounds.size.y > windowSize.y)
+			{
+				snake[0].setPosition({snake[0].getPosition().x, 10.f});
+			}
+
+			for (size_t i = 1; i < snake.size(); ++i)
+			{
+				if (snake[0].getPosition() == snake[i].getPosition())
+				{
+					snake.resize(1);
+					break;
+				}
+			}
+
+			for (auto &f : foods)
+			{
+				if (f.isActive)
+				{
+					sf::Vector2f diff = snake[0].getPosition() - f.shape.getPosition();
+					if ((diff.x * diff.x + diff.y * diff.y) < 100.f)
+					{
+						f.isActive = false;
+						sf::RectangleShape newSegment({20.f, 20.f});
+						newSegment.setFillColor(sf::Color::Green);
+						newSegment.setOutlineColor(sf::Color::Black);
+						newSegment.setOutlineThickness(1.f);
+						newSegment.setOrigin({10.f, 10.f});
+						newSegment.setPosition(oldTailPos);
+						snake.push_back(newSegment);
+					}
+				}
+			}
 		}
 
-		if (playerBounds.position.x <= 0.f)
-		{
-			player.setPosition({windowSize.x - 20.f, player.getPosition().y});
-		}
-		if (playerBounds.position.y <= 0.f)
-		{
-			player.setPosition({player.getPosition().x, windowSize.y - 20.f});
-		}
-		if (playerBounds.position.y + playerBounds.size.y >= windowSize.y)
-		{
-			player.setPosition({player.getPosition().x, 20.f});
-		}
-		if (playerBounds.position.x + playerBounds.size.x >= windowSize.x)
-		{
-			player.setPosition({20.f, player.getPosition().y});
-		}
-
-		std::cout << "Player Velocity: " << GetVelocity(direction, 20.f).x << ", " << GetVelocity(direction, 20.f).y << std::endl;
+		std::cout << "\rPlayer size: " << snake.size() << ", Pos: " << snake[0].getPosition().x << ", " << snake[0].getPosition().y << "   " << std::flush;
 
 		window.clear(sf::Color::White);
-		window.draw(player);
+		for (const auto& segment : snake)
+		{
+			window.draw(segment);
+		}
 		for (const auto &f : foods)
 		{
 			if (f.isActive)
